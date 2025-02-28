@@ -47,7 +47,7 @@ export function useEnv(): EnvConfig {
     API_RETRY_COUNT: import.meta.env.VITE_API_RETRY_COUNT || "3",
 
     // Map Configuration
-    GOOGLE_MAPS_API_KEY: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+    GOOGLE_MAPS_API_KEY: import.meta.env.VITE_GOOGLE_MAPS_API || "",
     MAP_DEFAULT_CENTER_LAT:
       import.meta.env.VITE_MAP_DEFAULT_CENTER_LAT || "48.8566",
     MAP_DEFAULT_CENTER_LNG:
