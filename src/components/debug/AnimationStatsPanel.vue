@@ -103,7 +103,7 @@ const performanceStats = ref<{
 // Update loop
 let animationFrame: number;
 function updateStats() {
-  performanceStats.value = markerAnimationTracker.getPerformanceStats();
+  // performanceStats.value = markerAnimationTracker.getPerformanceStats();
 
   // Update metrics for each animation
   activeAnimations.value.forEach((anim) => {
