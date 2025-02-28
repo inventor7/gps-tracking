@@ -100,7 +100,7 @@ export default defineConfig({
       dumpUnimportItems: "./auto-imports.json", // Default `false`
     }),
     Components({
-      dirs: ["src/components"],
+      dirs: ["src/components", "src/views"],
       resolvers: [IconsResolver()],
     }),
 

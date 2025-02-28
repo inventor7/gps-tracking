@@ -5,8 +5,9 @@ import "@/assets/index.css";
 
 import App from "./App.vue";
 import router from "./router";
-import { i18n } from "./router/guards/useLanguageGuard";
+import { setupI18n } from "./plugins/i18n";
 
+export const i18n = setupI18n();
 const pinia = createPinia();
 const app = createApp(App);
 

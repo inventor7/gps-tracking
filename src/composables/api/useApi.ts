@@ -17,7 +17,11 @@ export interface APIError {
   };
 }
 
-type ApiResult<T> = { result: T } | { error: APIError };
+interface APISuccess<T> {
+  result: T;
+}
+
+type ApiResult<T> = APISuccess<T> | { error: APIError };
 
 export interface ACKResponse {
   done: boolean;
@@ -27,7 +31,7 @@ export function useApi<T>(
   path: string = "",
   config: RawAxiosRequestConfig<any> = {},
   options: UseAxiosOptions & { initialData?: any } = {
-    immediate: true,
+    immediate: false,
     shallow: true,
     initialData: undefined,
   }
@@ -35,10 +39,9 @@ export function useApi<T>(
   const instance = createApiInstance();
   const query = useAxios<ApiResult<T>>(path, config, instance, options);
 
-  type EventCallback<V> = (value: V) => any;
-  const onResultSuccess = createEventHook<EventCallback<T>>();
-  const onResultError = createEventHook<EventCallback<APIError>>();
-  const onErrorString = createEventHook<EventCallback<string>>();
+  const onResultSuccess = createEventHook<any>();
+  const onResultError = createEventHook<APIError>();
+  const onErrorString = createEventHook<string>();
 
   const result = computed<T>(() => {
     if (query.data.value && "result" in query.data.value)
@@ -63,25 +66,15 @@ export function useApi<T>(
 
   whenever(query.isFinished, () => {
     if (errorString.value !== undefined) {
-      onErrorString.trigger((value: string) => errorString.value);
+      onErrorString.trigger(errorString.value);
     }
 
     if (query.data.value !== undefined) {
       if ("result" in query.data.value)
-        onResultSuccess.trigger((value: T) => {
-          if (query.data.value && "result" in query.data.value) {
-            return query.data.value.result;
-          }
-          return value;
-        });
+        onResultSuccess.trigger(query.data.value.result);
 
       if ("error" in query.data.value) {
-        onResultError.trigger((error: APIError) => {
-          if (query.data.value && "error" in query.data.value) {
-            return query.data.value.error;
-          }
-          return error;
-        });
+        onResultError.trigger(query.data.value.error);
       }
     }
   });

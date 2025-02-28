@@ -1,7 +1,8 @@
 import { defineStore } from "pinia";
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
-import type { LanguageCode } from "@/plugins/i18n";
+import { loadLocaleMessages, type LanguageCode } from "@/plugins/i18n";
+import { i18n } from "@/main";
 
 type Direction = "ltr" | "rtl";
 
@@ -40,29 +41,23 @@ export const useLanguageStore = defineStore("language", () => {
     () => languages.value[currentLanguage.value]
   );
 
-  async function setLanguage(locale: LanguageCode) {
-    const currentRoute = router.currentRoute.value;
-    const newPath = `/${locale}${currentRoute.fullPath.replace(
-      /^\/[^/]+/,
-      ""
-    )}`;
-
-    // Update store state
+  const setLanguage = async (locale: LanguageCode) => {
     currentLanguage.value = locale;
     direction.value = languages.value[locale].dir;
-
-    // Save preference
     localStorage.setItem("language", locale);
 
-    // Navigate to new locale path
-    await router.push(newPath);
-  }
+    if (!i18n.global.availableLocales.includes(currentLanguage.value)) {
+      await loadLocaleMessages(i18n, currentLanguage.value);
+    }
+
+    i18n.global.locale.value = currentLanguage.value;
+    document.querySelector("html")?.setAttribute("lang", currentLanguage.value);
+  };
 
   function initializeLanguage() {
     const savedLanguage = localStorage.getItem("language") as LanguageCode;
-    const urlLocale = window.location.pathname.split("/")[1] as LanguageCode;
     const initialLanguage =
-      urlLocale || savedLanguage || import.meta.env.VITE_DEFAULT_LOCALE;
+      savedLanguage || import.meta.env.VITE_DEFAULT_LOCALE;
 
     if (languages.value[initialLanguage]) {
       currentLanguage.value = initialLanguage;

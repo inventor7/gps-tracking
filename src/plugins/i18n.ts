@@ -21,18 +21,9 @@ export function setupI18n(
     messages: {},
   });
 
-  setI18nLanguage(i18n, options.locale);
+  i18n.global.locale.value = options.locale;
+  document.querySelector("html")?.setAttribute("lang", options.locale);
   return i18n;
-}
-
-export function setI18nLanguage(i18n: any, locale: LanguageCode) {
-  if (i18n.mode === "composition") {
-    i18n.global.locale.value = locale;
-  } else {
-    i18n.global.locale = locale;
-  }
-
-  document.querySelector("html")?.setAttribute("lang", locale);
 }
 
 export async function loadLocaleMessages(i18n: any, locale: LanguageCode) {
@@ -41,8 +32,4 @@ export async function loadLocaleMessages(i18n: any, locale: LanguageCode) {
   i18n.global.setLocaleMessage(locale, messages.default);
 
   return nextTick();
-}
-
-export function getI18n(i18n: any) {
-  return i18n;
 }
