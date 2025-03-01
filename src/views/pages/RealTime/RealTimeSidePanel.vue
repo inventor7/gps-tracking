@@ -23,20 +23,20 @@
   </SidebarGroup>
 </template>
 <script setup lang="ts">
-import { useActorsStore } from "@/stores/actors";
+import { useRealTimeActorsStore } from "@/stores/useRealTimeActorsStore";
 import { useRealTimeMarkers } from "@/stores/useRealTimeMarkersStore";
 import type { Actor } from "@/types/actor";
 
-const actorsStore = useActorsStore();
+const realTimeActorsStore = useRealTimeActorsStore();
 const realTimeMarkers = useRealTimeMarkers();
-const { actorRealTimePosition, filteredActors } = storeToRefs(actorsStore);
+const { actorsRTPosition, filteredActors } = storeToRefs(realTimeActorsStore);
 const { markersCreated } = storeToRefs(realTimeMarkers);
 
 const handleActorWidgetClick = async (actor: Actor) => {
-  const position = actorRealTimePosition.value[actor.id];
+  const position = actorsRTPosition.value[actor.id];
   if (position && !markersCreated.value.has(actor.id)) {
     await realTimeMarkers.createActorMarker(actor, position);
   }
-  await actorsStore.selectActor(actor);
+  await realTimeActorsStore.selectActor(actor);
 };
 </script>

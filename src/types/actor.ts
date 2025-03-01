@@ -53,18 +53,19 @@ export interface QueryParams {
   date_to: Date | null;
 }
 
-export interface ActorPositionParams {
+//history
+export type ActorsHPositions = Record<number, Position[]>;
+export interface ActorsHPositionParams {
   ids: number[];
   date_from: Date | null;
   date_to: Date | null;
 }
 
-export interface ActorRealTimePositionParams {
+//realTime
+export type ActorsRTosition = Record<number, Position>;
+export interface ActorsRTPositionParams {
   ids: number[];
 }
-
-export type ActorPositions = Record<number, Position[]>;
-export type ActorPosition = Record<number, Position>;
 
 // Routing types
 export interface LatLng {

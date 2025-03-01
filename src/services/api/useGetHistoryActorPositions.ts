@@ -1,10 +1,10 @@
 import { useApi } from "@/composables/api/useApi";
-import type { ActorPositions, ActorPositionParams } from "@/types/actor";
+import type { ActorsHPositionParams, ActorsHPositions } from "@/types/actor";
 
 export function useGetActorPositions() {
-  const query = useApi<ActorPositions>("/actor-position", {});
+  const query = useApi<ActorsHPositions>("/actor-position", {});
 
-  const execute = async (params: ActorPositionParams) => {
+  const execute = async (params: ActorsHPositionParams) => {
     const formatedParams = {
       ids: JSON.stringify(params.ids),
       date_from: params.date_from,

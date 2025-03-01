@@ -1,3 +1,5 @@
+import type { AnimationEasing } from "@/utils/markerAnimation";
+
 interface EnvConfig {
   // API Configuration
   API_BASE_URL: string;
@@ -12,7 +14,7 @@ interface EnvConfig {
   MAP_DEFAULT_ZOOM: string;
 
   // Update Intervals
-  UPDATE_INTERVAL: string;
+  UPDATE_INTERVAL: number;
   POSITION_REFRESH_RATE: string;
 
   // Debug Configuration
@@ -33,8 +35,8 @@ interface EnvConfig {
   MAX_PERFORMANCE_ENTRIES: string;
 
   // Animation Configuration
-  MARKER_ANIMATION_DURATION: string;
-  MARKER_ANIMATION_EASING: "linear" | "easeIn" | "easeOut" | "easeInOut";
+  MARKER_ANIMATION_DURATION: number;
+  MARKER_ANIMATION_EASING: AnimationEasing;
   ENABLE_ANIMATION_DEBUG: string;
 }
 

@@ -3,7 +3,10 @@ import { ref } from "vue";
 import { Loader } from "@googlemaps/js-api-loader";
 import { useEnv } from "@/composables/useEnv";
 import { performanceTracker } from "@/utils/performance";
-import { createMarkerAnimation } from "@/utils/markerAnimation";
+import {
+  createMarkerAnimation,
+  getEasingFunction,
+} from "@/utils/markerAnimation";
 import { markerPathVisualizer } from "@/utils/markerPathVisualizer";
 import type { MapState, MarkerOptions, MarkerData } from "@/types/map";
 import { useRealTimeMarkers } from "./useRealTimeMarkersStore";
@@ -11,11 +14,8 @@ import type { Actor, Position } from "@/types/actor";
 
 // Create marker animator instance
 const markerAnimator = createMarkerAnimation({
-  duration: 300, // 300ms animation duration
-  onStep: () =>
-    performanceTracker.measure("marker-animation-frame", () =>
-      Promise.resolve()
-    ),
+  duration: useEnv().MARKER_ANIMATION_DURATION,
+  easing: getEasingFunction(useEnv().MARKER_ANIMATION_EASING),
 });
 
 export const useMapStore = defineStore("map", () => {
@@ -25,6 +25,8 @@ export const useMapStore = defineStore("map", () => {
   const markers = ref<Record<string, google.maps.marker.AdvancedMarkerElement>>(
     {}
   );
+
+  const deprecatedMarkers = ref<Record<string, google.maps.Marker>>({});
   const isLoaded = ref(false);
 
   // Actions
@@ -46,30 +48,29 @@ export const useMapStore = defineStore("map", () => {
     const loader = new Loader({
       apiKey,
       version: "weekly",
+      libraries: ["maps", "marker"],
     });
 
     try {
       const { Map } = await loader.importLibrary("maps");
+      const { AdvancedMarkerElement, PinElement } = await loader.importLibrary(
+        "marker"
+      );
 
       map.value = new Map(container, {
+        mapId: "DEMO_MAP_ID",
         center: defaultCenter,
         zoom: defaultZoom,
-        styles: [
-          {
-            featureType: "poi",
-            elementType: "labels",
-            stylers: [{ visibility: "off" }],
-          },
-        ],
         mapTypeControl: false,
         streetViewControl: false,
         fullscreenControl: false,
+        zoomControl: false,
+        gestureHandling: "greedy",
       });
-
-      // Enable advanced markers
 
       isLoaded.value = true;
     } catch (error) {
+      console.error("Error initializing map:", error);
       throw error;
     }
   };
@@ -89,38 +90,45 @@ export const useMapStore = defineStore("map", () => {
   };
 
   const addMarker = (
-    id: string,
+    id: number,
     position: google.maps.LatLngLiteral,
     element?: HTMLElement
   ) => {
-    if (!map.value || !isLoaded.value) {
-      return null;
-    }
-
-    // Remove existing marker if it exists
-    removeMarker(id);
-
     try {
-      const options: google.maps.marker.AdvancedMarkerElementOptions = {
+      //Advanced Marker
+      // const options: google.maps.marker.AdvancedMarkerElementOptions = {
+      //   map: map.value,
+      //   position,
+      //   title: `actor-${id}`,
+      // };
+
+      // if (element) options.content = element;
+      // else {
+      //   const content = new google.maps.marker.PinElement({
+      //     scale: 2,
+      //   });
+      //   options.content = content.element;
+      // }
+      //const marker = new google.maps.marker.AdvancedMarkerElement(options);
+      // markers.value[`actor-${id}`] = marker;
+
+      const marker = new google.maps.Marker({
         map: map.value,
         position,
-        title: id,
-      };
+        title: `actor-${id}`,
+        icon: {
+          url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
+        },
+        optimized: false,
+      });
 
-      if (element) {
-        options.content = element;
-      }
+      deprecatedMarkers.value[`actor-${id}`] = marker;
 
-      const marker = new google.maps.marker.AdvancedMarkerElement(options);
-
-      // Add marker to the map
-      console.log("Adding marker", { id, marker });
-
-      markers.value[id] = marker;
+      console.log("created marker", id);
 
       return marker;
     } catch (error) {
-      return null;
+      return console.error("Error adding marker:", error);
     }
   };
 
@@ -140,68 +148,58 @@ export const useMapStore = defineStore("map", () => {
     );
   };
 
+  const minusMarker = ref(0);
+
   const updateMarkerPosition = async (actor: Actor, position: Position) => {
     const marker = markers.value[`actor-${actor.id}`];
-    const realTimeMarkers = useRealTimeMarkers();
+    const deprecatedMarker = deprecatedMarkers.value[`actor-${actor.id}`];
 
-    if (!marker) {
-      if (position) {
-        // Note: This needs to be fixed as 'actor' is not defined
-        await realTimeMarkers.createActorMarker(actor, position);
-        return;
-      }
-    }
+    minusMarker.value = minusMarker.value + 0.001;
+
+    await markerAnimator.animate(`actor-${actor.id}`, deprecatedMarker, {
+      lat: position.latitude + minusMarker.value,
+      lng: position.longitude + minusMarker.value,
+    });
+
+    if (!marker) return;
 
     try {
-      // Animate marker to new position
+      console.log("Animate");
       await markerAnimator.animate(`actor-${actor.id}`, marker, {
         lat: position.latitude,
         lng: position.longitude,
       });
     } catch (error) {
-      // Fallback to instant update
+      console.error(
+        `Error updating marker position for actor-${actor.id}:`,
+        error
+      );
+
       marker.position = { lat: position.latitude, lng: position.longitude };
     }
   };
 
   const panTo = (position: google.maps.LatLngLiteral) => {
-    performanceTracker.measure(
-      "map-pan",
-      async () => {
-        if (map.value) {
-          map.value.panTo(position);
-        }
-      },
-      { position }
-    );
+    if (map.value) {
+      map.value.panTo(position);
+    }
   };
 
   const fitBounds = (bounds: google.maps.LatLngBoundsLiteral) => {
-    performanceTracker.measure(
-      "map-fit-bounds",
-      async () => {
-        if (!map.value) {
-          return;
-        }
+    if (!map.value) {
+      return;
+    }
 
-        const googleBounds = new google.maps.LatLngBounds(bounds);
-        map.value.fitBounds(googleBounds);
-      },
-      { bounds }
-    );
+    const googleBounds = new google.maps.LatLngBounds(bounds);
+    map.value.fitBounds(googleBounds);
   };
 
   const setZoom = (zoom: number) => {
-    performanceTracker.measure(
-      "map-zoom",
-      async () => {
-        if (map.value) {
-          map.value.setZoom(zoom);
-        }
-      },
-      { zoom }
-    );
+    if (map.value) {
+      map.value.setZoom(zoom);
+    }
   };
+
   return {
     // State
     map,

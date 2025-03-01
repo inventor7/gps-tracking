@@ -1,11 +1,11 @@
 <template>
   <div class="h-full w-full relative">
     <!-- Map Container -->
-    <div ref="mapContainer" class="w-full h-full"></div>
+    <div id="map" ref="mapContainer" class="w-full h-full"></div>
     <!-- Actor Details Panel -->
     <RealTimeActorPanel
       :selected-actor="selectedActor"
-      @close:actor="handleCloseActorPanle"
+      @close:actor="handleCloseActorPanel"
     />
 
     <!-- Debug Panels (Development Only) -->
@@ -20,7 +20,6 @@
 
 <script setup lang="ts">
 import { useMapStore } from "@/stores/map";
-import { useActorsStore } from "@/stores/actors";
 import { useEnv } from "@/composables/useEnv";
 import MapDebugPanel from "@/components/debug/MapDebugPanel.vue";
 import AnimationDebugPanel from "@/components/debug/AnimationDebugPanel.vue";
@@ -28,6 +27,7 @@ import type { Actor } from "@/types/actor";
 import RealTimeActorPanel from "@/views/pages/RealTime/RealTimeActorPanel.vue";
 import { useRealTimeMarkers } from "@/stores/useRealTimeMarkersStore";
 import { storeToRefs } from "pinia";
+import { useRealTimeActorsStore } from "@/stores/useRealTimeActorsStore";
 
 const env = useEnv();
 // const logger = createLogger("RealTime");
@@ -35,12 +35,18 @@ const env = useEnv();
 
 //stores
 const mapStore = useMapStore();
-const actorsStore = useActorsStore();
+const realTimeActorsStore = useRealTimeActorsStore();
 const realTimeMarkers = useRealTimeMarkers();
 
 const { mapContainer } = storeToRefs(mapStore);
 const { markersCreated } = storeToRefs(realTimeMarkers);
-const { actors, actorPositions, selectedActor } = storeToRefs(actorsStore);
+const {
+  actors,
+  actorsRTPosition,
+  selectedActor,
+  selectedActors,
+  selectedActorsIds,
+} = storeToRefs(realTimeActorsStore);
 
 onMounted(async () => {
   if (!mapContainer.value) {
@@ -49,61 +55,42 @@ onMounted(async () => {
 
   await mapStore.initializeMap(mapContainer.value);
 
-  // First fetch actors
-  await actorsStore.fetchActors();
+  await realTimeActorsStore.fetchActors();
 
-  // Then fetch initial positions
-  if (actors.value.length > 0) {
-    await actorsStore.fetchActorPositions({
-      ids: actors.value.map((actor) => actor.id),
-      date_from: null,
-      date_to: null,
-    });
-  }
+  //init for all actors
+  selectedActors.value = [actors.value[12]];
 
-  // Create markers for all actors with their initial positions
-  await Promise.all(actors.value.map((actor) => createActorMarkerBatch(actor)));
+  await realTimeActorsStore.fetchRTActorsPosition({
+    ids: selectedActorsIds.value,
+  });
 
-  // Start real-time updates
-  actorsStore.startPositionUpdates(Number(env.UPDATE_INTERVAL));
+  await Promise.all(
+    selectedActors.value.map((actor) => createActorMarkerBatch(actor))
+  );
+
+  await realTimeActorsStore.startPositionUpdates(Number(env.UPDATE_INTERVAL));
 });
 
 const createActorMarkerBatch = async (actor: Actor): Promise<void> => {
-  const position = actorsStore.getCurrentPosition(actor.id);
-  if (position) {
-    await realTimeMarkers.createActorMarker(actor, position);
-  }
+  const position = actorsRTPosition.value[actor.id];
+
+  await realTimeMarkers.createActorMarker(actor, position);
 };
 
-// Add a new handler for actor selection
-const handleActorSelect = async (actor: Actor) => {
-  // Ensure marker exists before selecting
-  const position = actorsStore.getCurrentPosition(actor.id);
-  if (position && !markersCreated.value.has(actor.id)) {
-    await realTimeMarkers.createActorMarker(actor, position);
-  }
-  await actorsStore.selectActor(actor);
+const handleCloseActorPanel = async () => {
+  await realTimeActorsStore.selectActor(undefined);
 };
 
-const handleCloseActorPanle = async () => {
-  await actorsStore.selectActor(undefined);
-};
-
-// Watch for changes in positions and update markers
 watch(
-  actorPositions,
+  actorsRTPosition,
   async (newPositions) => {
     await Promise.all(
-      Object.entries(newPositions).map(([actorId, positions]) => {
-        const lastPosition = positions[positions.length - 1];
-        if (lastPosition) {
-          // Find the actor by ID
-          const actor = actors.value.find((a) => a.id === Number(actorId));
-          if (actor) {
-            return realTimeMarkers.createActorMarker(actor, lastPosition);
-          }
-        }
-        return Promise.resolve();
+      Object.entries(newPositions).map(async ([actorId, position]) => {
+        const actor = actors.value.find((a) => a.id === Number(actorId));
+
+        if (!actor) return;
+
+        await mapStore.updateMarkerPosition(actor, position);
       })
     );
   },
@@ -111,13 +98,12 @@ watch(
 );
 
 onUnmounted(() => {
-  // Cleanup any remaining markers
   markersCreated.value.forEach((actorId) => {
     realTimeMarkers.removeActorMarker(actorId);
   });
   markersCreated.value.clear();
 
-  actorsStore.stopPositionUpdates();
+  realTimeActorsStore.stopPositionUpdates();
   mapStore.destroyMap();
 });
 </script>

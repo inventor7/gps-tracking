@@ -1,10 +1,10 @@
 import { useApi } from "@/composables/api/useApi";
-import type { ActorPosition, ActorRealTimePositionParams } from "@/types/actor";
+import type { ActorsRTosition, ActorsRTPositionParams } from "@/types/actor";
 
-export function useGetRealTimeActorPosition() {
-  const query = useApi<ActorPosition>("/actor-position", {});
+export function useGetRTActorsPosition() {
+  const query = useApi<ActorsRTosition>("/actor-position", {});
 
-  const execute = async (params: ActorRealTimePositionParams) => {
+  const execute = async (params: ActorsRTPositionParams) => {
     const formatedParams = {
       ids: JSON.stringify(params.ids),
     };

@@ -31,15 +31,11 @@
       <div class="grid grid-cols-2 gap-4 text-sm">
         <div>
           <p class="text-gray-600">Speed</p>
-          <p class="font-medium">
-            {{ getCurrentSpeed(selectedActor.id) || 0 }} km/h
-          </p>
+          <p class="font-medium">{{ selectedActor.speed || 0 }} km/h</p>
         </div>
         <div>
           <p class="text-gray-600">Battery</p>
-          <p class="font-medium">
-            {{ getCurrentBattery(selectedActor.id) || 0 }}%
-          </p>
+          <p class="font-medium">{{ selectedActor.battery || 0 }}%</p>
         </div>
       </div>
 
@@ -57,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { useActorsStore } from "@/stores/actors";
+import { useRealTimeActorsStore } from "@/stores/useRealTimeActorsStore";
 import type { Actor } from "@/types/actor";
 import { Truck, ShoppingCart, User, X } from "lucide-vue-next";
 
@@ -66,8 +62,8 @@ const { selectedActor } = defineProps<{
   selectedActor: Actor | undefined;
 }>();
 
-const actorsStore = useActorsStore();
-const { actors, actorPositions } = storeToRefs(actorsStore);
+const realTimeActorsStore = useRealTimeActorsStore();
+const {} = storeToRefs(realTimeActorsStore);
 
 const getWorkflowIcon = (actor: Actor) => {
   switch (actor.workflow_type?.toLowerCase()) {
@@ -78,20 +74,6 @@ const getWorkflowIcon = (actor: Actor) => {
     default:
       return User;
   }
-};
-
-const getCurrentPosition = (actorId: number) => {
-  const positions = actorPositions.value[actorId];
-  if (!positions || positions.length === 0) return null;
-  return positions[positions.length - 1];
-};
-
-const getCurrentSpeed = (actorId: number) => {
-  return getCurrentPosition(actorId)?.speed ?? 0;
-};
-
-const getCurrentBattery = (actorId: number) => {
-  return getCurrentPosition(actorId)?.battery ?? 0;
 };
 
 const handleClosePanel = () => {

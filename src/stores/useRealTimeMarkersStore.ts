@@ -1,42 +1,47 @@
-import type { Actor, LatLng, Position } from "@/types/actor";
-import { useActorsStore } from "./actors";
+import { defineStore } from "pinia";
+import { ref } from "vue";
+import type { Actor, Position } from "@/types/actor";
 import { useMapStore } from "./map";
 
 export const useRealTimeMarkers = defineStore("real-time-markers", () => {
-  const actorsStore = useActorsStore();
   const mapStore = useMapStore();
 
-  // State
-  const { selectedActor } = storeToRefs(actorsStore);
   const markersCreated = ref<Set<number>>(new Set());
 
-  // Actions
   const createActorMarker = async (actor: Actor, position: Position) => {
-    if (!mapStore.map) {
-      console.warn("Map not initialized");
-      return null;
-    }
-
-    if (!position) {
-      console.warn(`No position data for actor ${actor.id}`);
-      return null;
-    }
-
     try {
-      // Check if marker already exists
-      if (markersCreated.value.has(actor.id)) {
-        // Just update position if marker exists
-        return mapStore.updateMarkerPosition(actor, position);
-      }
+      const doesMarkerExist = markersCreated.value.has(actor.id);
 
-      // Add marker to map
-      const marker = mapStore.addMarker(`actor-${actor.id}`, {
-        lat: position.latitude,
-        lng: position.longitude,
-      });
+      if (doesMarkerExist)
+        return await mapStore.updateMarkerPosition(actor, position);
 
-      // Track that this marker has been created
-      markersCreated.value.add(actor.id);
+      const markerElement = document.createElement("div");
+      markerElement.innerHTML = `
+        <div style="
+          background-color: #4285F4; 
+          width: 24px; 
+          height: 24px; 
+          border-radius: 50%; 
+          border: 2px solid white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: bold;
+          font-size: 12px;
+        ">${actor.id}</div>
+      `;
+
+      const marker = mapStore.addMarker(
+        actor.id,
+        {
+          lat: position.latitude,
+          lng: position.longitude,
+        },
+        markerElement
+      );
+
+      if (marker) markersCreated.value.add(actor.id);
 
       return marker;
     } catch (error) {
@@ -50,6 +55,7 @@ export const useRealTimeMarkers = defineStore("real-time-markers", () => {
 
   const removeActorMarker = (actorId: number) => {
     try {
+      console.log(`Removing marker for actor ${actorId}`);
       markersCreated.value.delete(actorId);
       mapStore.removeMarker(`actor-${actorId}`);
     } catch (error) {
@@ -61,9 +67,8 @@ export const useRealTimeMarkers = defineStore("real-time-markers", () => {
   };
 
   return {
-    // State
     markersCreated,
-    // Actions
+
     createActorMarker,
     removeActorMarker,
   };

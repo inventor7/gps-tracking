@@ -2,6 +2,7 @@
   <ConfigProvider :locale="currentLanguage" :dir="direction">
     <div :dir="direction">
       <RouterView />
+      <Toaster />
     </div>
   </ConfigProvider>
 </template>

@@ -99,7 +99,7 @@ import { useSidebar, type SidebarProps } from "@/components/ui/sidebar";
 import RealTimeSidePanel from "@/views/pages/RealTime/RealTimeSidePanel.vue";
 import HistorySidePanel from "@/views/pages/History/HistorySidePanel.vue";
 import AnalyticsSidePanel from "@/views/pages/Analytics/AnalyticsSidePanel.vue";
-import { useActorsStore } from "../../../stores/actors";
+import { useRealTimeActorsStore } from "@/stores/useRealTimeActorsStore";
 
 interface NavigationItem {
   name: string;
@@ -111,9 +111,9 @@ interface NavigationItem {
 const props = withDefaults(defineProps<SidebarProps>(), {
   collapsible: "icon",
 });
-const actorStore = useActorsStore();
+const realTimeActorsStore = useRealTimeActorsStore();
 
-const { searchTerm } = storeToRefs(actorStore);
+const { searchTerm } = storeToRefs(realTimeActorsStore);
 const { setOpen } = useSidebar();
 const router = useRouter();
 
